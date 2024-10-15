@@ -23,12 +23,26 @@ def bakeries():
     bakeries = [bakery.to_dict() for bakery in Bakery.query.all()]
     return make_response(  bakeries,   200  )
 
-@app.route('/bakeries/<int:id>')
+@app.route('/bakeries/<int:id>',methods = ['GET','PATCH'])
 def bakery_by_id(id):
 
     bakery = Bakery.query.filter_by(id=id).first()
-    bakery_serialized = bakery.to_dict()
-    return make_response ( bakery_serialized, 200  )
+    if request.method == 'GET':
+        bakery = Bakery.query.filter_by(id=id).first()
+        return make_response(bakery.to_dict(),200)
+    elif request.method == 'PATCH':
+        for attr in request.form:
+            setattr(bakery,attr,request.form.get(attr))
+
+        db.session.add(bakery)
+        db.session.commit()   
+
+        bakery_dict = bakery.to_dict()
+        return make_response(
+            bakery_dict,200
+        ) 
+
+    
 
 @app.route('/baked_goods/by_price')
 def baked_goods_by_price():
@@ -38,7 +52,41 @@ def baked_goods_by_price():
     ]
     return make_response( baked_goods_by_price_serialized, 200  )
    
+@app.route('/baked_goods',methods=['GET','POST'])
+def baked_goods():
+    if request.method == 'GET':
+        baked_goods = []
+        for baked_good in BakedGood.query.all():
+            goods_dict = baked_good.to_dict()
+            baked_goods.append(goods_dict)
+        response = make_response(
+            baked_goods,
+            200
+        )    
+        return response
+    elif request.method == 'POST':
+        baked_good = BakedGood(
+            name = request.form.get("name"),
+            price = request.form.get("price"),
+            bakery_id = request.form.get("bakery_id")
+        )
+        db.session.add(baked_good)
+        db.session.commit()
 
+        return make_response(baked_good.to_dict(), 201 )
+
+        pass
+    pass
+@app.route('/baked_goods/<int:id>', methods= ['GET','DELETE'])
+def baked_goods_by_id(id):
+    baked_id = BakedGood.query.filter_by(id=id).first()
+    if request.method == 'GET':
+        return make_response(baked_id.tp_dict(),200)
+    elif request.method  == 'DELETE':
+        db.session.delete(baked_id)
+        db.session.commit()
+        return make_response({'message':"deleted"})
+    pass
 @app.route('/baked_goods/most_expensive')
 def most_expensive_baked_good():
     most_expensive = BakedGood.query.order_by(BakedGood.price.desc()).limit(1).first()
